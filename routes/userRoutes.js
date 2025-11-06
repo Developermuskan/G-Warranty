@@ -9,35 +9,6 @@ console.log("authorizeRoles import:", authorizeRoles);
 console.log("authorizeRoles('admin') type:", typeof authorizeRoles("admin"));
 
 
-// Example routes
-router.get(
-  "/user-dashboard",
-  verifyToken,
-  authorizeRoles("user", "admin"),
-  (req, res) => {
-    res.json({ message: `Welcome ${req.user.role} to User Dashboard` });
-  }
-);
-
-router.get(
-  "/admin-dashboard",
-  verifyToken,
-  authorizeRoles("admin"),
-  (req, res) => {
-    res.json({ message: "Welcome Admin!" });
-  }
-);
-
-router.get(
-  "/shop-dashboard",
-  verifyToken,
-  authorizeRoles("shopkeeper"),
-  (req, res) => {
-    res.json({ message: "Welcome Shopkeeper!" });
-  }
-);
-
-
 /**
  * @swagger
  * tags:
@@ -113,8 +84,36 @@ router.post('/', async (req, res) => {
  *         description: Internal Server Error — Something went wrong on the server
  */
 
+
 // ✅ Apply token check to all below routes
 router.use(verifyToken);
+// Example routes
+router.get(
+  "/user-dashboard",
+  verifyToken,
+  authorizeRoles("user", "admin"),
+  (req, res) => {
+    res.json({ message: `Welcome ${req.user.role} to User Dashboard` });
+  }
+);
+
+router.get(
+  "/admin-dashboard",
+  verifyToken,
+  authorizeRoles("admin"),
+  (req, res) => {
+    res.json({ message: "Welcome Admin!" });
+  }
+);
+
+router.get(
+  "/shop-dashboard",
+  verifyToken,
+  authorizeRoles("shopkeeper"),
+  (req, res) => {
+    res.json({ message: "Welcome Shopkeeper!" });
+  }
+);
 
 
 router.get('/', async (req, res) => {
