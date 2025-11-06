@@ -67,8 +67,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-
-
 /**
  * @swagger
  * /api/users:
@@ -87,6 +85,7 @@ router.post('/', async (req, res) => {
 
 // ✅ Apply token check to all below routes
 router.use(verifyToken);
+
 // Example routes
 router.get(
   "/user-dashboard",

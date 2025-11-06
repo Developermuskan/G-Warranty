@@ -22,7 +22,7 @@ app.use(cors()); // Enable CORS for all origins
 app.use('/api/auth', authRoutes);
 
 // ✅ All other routes PROTECTED with JWT verification
-app.use('/api/users', verifyToken, userRoutes);
+app.use('/api/users', userRoutes);
 
 // ✅ Swagger UI setup
 app.use(
