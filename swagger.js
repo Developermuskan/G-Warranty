@@ -19,6 +19,10 @@ const swaggerOptions = {
         url: "https://facultative-melita-sonorous.ngrok-free.dev",
         description: "Ngrok Tunnel (Live Server)",
       },
+      {
+        url: "https://g-warranty.onrender.com",
+        description: "Render Live Server",
+      },
     ],
     components: {
       securitySchemes: {
