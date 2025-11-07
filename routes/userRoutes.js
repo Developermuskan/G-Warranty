@@ -62,7 +62,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-/* ------------------  ADMIN-ONLY CREATE ROUTE  ------------------ */
+/* ------------------  ADMIN-ONLY CREATE ROUTES  ------------------ */
 /**
  * @swagger
  * /api/users/admin-create:
@@ -177,58 +177,8 @@ router.post(
   }
 );
 
-
 // ✅ Protect all routes below
 router.use(verifyToken);
-
-/* ------------------ DASHBOARD ROUTES ------------------ */
-/**
- * @swagger
- * /api/users/user-dashboard:
- *   get:
- *     summary: Access user dashboard
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Welcome user message
- */
-router.get("/user-dashboard", authorizeRoles("user", "admin"), (req, res) => {
-  res.json({ message: `Welcome ${req.user.role} to User Dashboard` });
-});
-
-/**
- * @swagger
- * /api/users/admin-dashboard:
- *   get:
- *     summary: Access admin dashboard
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Welcome admin message
- */
-router.get("/admin-dashboard", authorizeRoles("admin"), (req, res) => {
-  res.json({ message: "Welcome Admin!" });
-});
-
-/**
- * @swagger
- * /api/users/shop-dashboard:
- *   get:
- *     summary: Access shopkeeper dashboard
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Welcome shopkeeper message
- */
-router.get("/shop-dashboard", authorizeRoles("shopkeeper"), (req, res) => {
-  res.json({ message: "Welcome Shopkeeper!" });
-});
 
 /* ------------------ CRUD ROUTES ------------------ */
 /**
@@ -245,7 +195,9 @@ router.get("/shop-dashboard", authorizeRoles("shopkeeper"), (req, res) => {
  */
 router.get("/", authorizeRoles("admin"), async (req, res) => {
   try {
-    const result = await pool.query("SELECT id, name, email, role FROM users ORDER BY id ASC");
+    const result = await pool.query(
+      "SELECT id, name, email, role FROM users ORDER BY id ASC"
+    );
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -274,8 +226,12 @@ router.get("/", authorizeRoles("admin"), async (req, res) => {
 router.get("/:id", authorizeRoles("admin"), async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("SELECT id, name, email, role FROM users WHERE id=$1", [id]);
-    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    const result = await pool.query(
+      "SELECT id, name, email, role FROM users WHERE id=$1",
+      [id]
+    );
+    if (!result.rows.length)
+      return res.status(404).json({ message: "User not found" });
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error fetching user:", error);
@@ -301,7 +257,8 @@ router.put("/:id", authorizeRoles("admin"), async (req, res) => {
       "UPDATE users SET name=$1, email=$2, password=$3, role=$4 WHERE id=$5 RETURNING id, name, email, role",
       [name, email, hashedPassword, role || "user", id]
     );
-    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    if (!result.rows.length)
+      return res.status(404).json({ message: "User not found" });
     res.json(result.rows[0]);
   } catch (error) {
     console.error("Error updating user:", error);
@@ -321,8 +278,12 @@ router.put("/:id", authorizeRoles("admin"), async (req, res) => {
 router.delete("/:id", authorizeRoles("admin"), async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("DELETE FROM users WHERE id=$1 RETURNING *", [id]);
-    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    const result = await pool.query(
+      "DELETE FROM users WHERE id=$1 RETURNING *",
+      [id]
+    );
+    if (!result.rows.length)
+      return res.status(404).json({ message: "User not found" });
     res.json({ message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);
