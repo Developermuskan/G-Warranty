@@ -117,6 +117,67 @@ router.post(
   }
 );
 
+/**
+ * @swagger
+ * /api/users/create-shopkeeper:
+ *   post:
+ *     summary: Admin-only — create a new shopkeeper (role fixed as 'shopkeeper')
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Shopkeeper One
+ *               email:
+ *                 type: string
+ *                 example: shopkeeper1@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: shop123
+ *     responses:
+ *       201:
+ *         description: Shopkeeper created successfully
+ *       403:
+ *         description: Forbidden — Only admin can create
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  "/create-shopkeeper",
+  verifyToken,
+  authorizeRoles("admin"),
+  async (req, res) => {
+    const { name, email, password } = req.body;
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const result = await pool.query(
+        "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+        [name, email, hashedPassword, "shopkeeper"]
+      );
+
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error("Error creating shopkeeper:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+
 // ✅ Protect all routes below
 router.use(verifyToken);
 
