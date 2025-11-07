@@ -1,13 +1,10 @@
+// routes/userRoutes.js
 const express = require("express");
 const router = express.Router();
-const verifyToken = require("../middleware/authMiddleware");
-const authorizeRoles = require("../middleware/roleMiddleware");
 const bcrypt = require("bcrypt");
 const pool = require("../db");
-
-console.log("authorizeRoles import:", authorizeRoles);
-console.log("authorizeRoles('admin') type:", typeof authorizeRoles("admin"));
-
+const verifyToken = require("../middleware/authMiddleware");
+const authorizeRoles = require("../middleware/roleMiddleware");
 
 /**
  * @swagger
@@ -16,11 +13,12 @@ console.log("authorizeRoles('admin') type:", typeof authorizeRoles("admin"));
  *   description: User management APIs
  */
 
+/* ------------------  PUBLIC ROUTE (REGISTER)  ------------------ */
 /**
  * @swagger
- * /api/users:
+ * /api/users/register:
  *   post:
- *     summary: Create a new user (password is hashed before saving)
+ *     summary: Register a new user (role always set to 'user')
  *     tags: [Users]
  *     requestBody:
  *       required: true
@@ -45,134 +43,34 @@ console.log("authorizeRoles('admin') type:", typeof authorizeRoles("admin"));
  *                 example: mySecret123
  *     responses:
  *       201:
- *         description: User created successfully
+ *         description: User registered successfully
+ *       500:
+ *         description: Server error
  */
-
-router.post('/', async (req, res) => {
+router.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
-
   try {
-    // Hash password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const result = await pool.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, hashedPassword]
+      "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+      [name, email, hashedPassword, "user"]
     );
-
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error registering user:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
+/* ------------------  ADMIN-ONLY CREATE ROUTE  ------------------ */
 /**
  * @swagger
- * /api/users:
- *   get:
- *     summary: Get all users (without passwords)
+ * /api/users/admin-create:
+ *   post:
+ *     summary: Admin-only — create user with any role
  *     tags: [Users]
- *     responses:
- *       200:
- *         description: List of all users (password hidden)
- *       400:
- *         description: Bad Request — The request parameters are invalid
- *       500:
- *         description: Internal Server Error — Something went wrong on the server
- */
-
-
-// ✅ Apply token check to all below routes
-router.use(verifyToken);
-
-// Example routes
-router.get(
-  "/user-dashboard",
-  verifyToken,
-  authorizeRoles("user", "admin"),
-  (req, res) => {
-    res.json({ message: `Welcome ${req.user.role} to User Dashboard` });
-  }
-);
-
-router.get(
-  "/admin-dashboard",
-  verifyToken,
-  authorizeRoles("admin"),
-  (req, res) => {
-    res.json({ message: "Welcome Admin!" });
-  }
-);
-
-router.get(
-  "/shop-dashboard",
-  verifyToken,
-  authorizeRoles("shopkeeper"),
-  (req, res) => {
-    res.json({ message: "Welcome Shopkeeper!" });
-  }
-);
-
-
-router.get('/', async (req, res) => {
-  try {
-    // Hide passwords
-    const result = await pool.query('SELECT id, name, email FROM users ORDER BY id ASC');
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-/**
- * @swagger
- * /api/users/{id}:
- *   get:
- *     summary: Get a single user by ID (without password)
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
- *     responses:
- *       200:
- *         description: User details (without password)
- *       404:
- *         description: User not found
- */
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [id]);
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: 'User not found' });
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-
-/**
- * @swagger
- * /api/users/{id}:
- *   put:
- *     summary: Update a user by ID (password re-hashed)
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: User ID
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -186,46 +84,119 @@ router.get('/:id', async (req, res) => {
  *             properties:
  *               name:
  *                 type: string
- *                 example: Updated Name
  *               email:
  *                 type: string
- *                 example: updated@example.com
  *               password:
  *                 type: string
- *                 example: newPassword123
+ *               role:
+ *                 type: string
+ *                 example: shopkeeper
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *       403:
+ *         description: Forbidden — Only admin can create
+ */
+router.post(
+  "/admin-create",
+  verifyToken,
+  authorizeRoles("admin"),
+  async (req, res) => {
+    const { name, email, password, role } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const result = await pool.query(
+        "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role",
+        [name, email, hashedPassword, role || "user"]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// ✅ Protect all routes below
+router.use(verifyToken);
+
+/* ------------------ DASHBOARD ROUTES ------------------ */
+/**
+ * @swagger
+ * /api/users/user-dashboard:
+ *   get:
+ *     summary: Access user dashboard
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User updated successfully
- *       404:
- *         description: User not found
+ *         description: Welcome user message
  */
+router.get("/user-dashboard", authorizeRoles("user", "admin"), (req, res) => {
+  res.json({ message: `Welcome ${req.user.role} to User Dashboard` });
+});
 
-router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { name, email, password } = req.body;
+/**
+ * @swagger
+ * /api/users/admin-dashboard:
+ *   get:
+ *     summary: Access admin dashboard
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Welcome admin message
+ */
+router.get("/admin-dashboard", authorizeRoles("admin"), (req, res) => {
+  res.json({ message: "Welcome Admin!" });
+});
 
+/**
+ * @swagger
+ * /api/users/shop-dashboard:
+ *   get:
+ *     summary: Access shopkeeper dashboard
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Welcome shopkeeper message
+ */
+router.get("/shop-dashboard", authorizeRoles("shopkeeper"), (req, res) => {
+  res.json({ message: "Welcome Shopkeeper!" });
+});
+
+/* ------------------ CRUD ROUTES ------------------ */
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Get all users (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
+router.get("/", authorizeRoles("admin"), async (req, res) => {
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      'UPDATE users SET name=$1, email=$2, password=$3 WHERE id=$4 RETURNING id, name, email',
-      [name, email, hashedPassword, id]
-    );
-
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: 'User not found' });
-
-    res.json(result.rows[0]);
+    const result = await pool.query("SELECT id, name, email, role FROM users ORDER BY id ASC");
+    res.json(result.rows);
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 /**
  * @swagger
  * /api/users/{id}:
- *   delete:
- *     summary: Delete a user by ID
+ *   get:
+ *     summary: Get a single user by ID (admin only)
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -233,26 +204,69 @@ router.put('/:id', async (req, res) => {
  *         required: true
  *         schema:
  *           type: integer
- *         description: User ID
  *     responses:
  *       200:
- *         description: User deleted successfully
+ *         description: User details
  *       404:
  *         description: User not found
  */
-
-router.delete('/:id', async (req, res) => {
+router.get("/:id", authorizeRoles("admin"), async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('DELETE FROM users WHERE id=$1 RETURNING *', [id]);
-    if (result.rows.length === 0)
-      return res.status(404).json({ message: 'User not found' });
-    res.json({ message: 'User deleted successfully' });
+    const result = await pool.query("SELECT id, name, email, role FROM users WHERE id=$1", [id]);
+    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error fetching user:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update user (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.put("/:id", authorizeRoles("admin"), async (req, res) => {
+  const { id } = req.params;
+  const { name, email, password, role } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      "UPDATE users SET name=$1, email=$2, password=$3, role=$4 WHERE id=$5 RETURNING id, name, email, role",
+      [name, email, hashedPassword, role || "user", id]
+    );
+    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete user (admin only)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete("/:id", authorizeRoles("admin"), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("DELETE FROM users WHERE id=$1 RETURNING *", [id]);
+    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 module.exports = router;
