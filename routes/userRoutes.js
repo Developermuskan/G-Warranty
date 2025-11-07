@@ -270,25 +270,45 @@ router.put("/:id", authorizeRoles("admin"), async (req, res) => {
  * @swagger
  * /api/users/{id}:
  *   delete:
- *     summary: Delete user (admin only)
+ *     summary: Delete a user (admin only)
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: Numeric ID of the user to delete
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     responses:
+ *       200:
+ *         description: User deleted successfully
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
  */
 router.delete("/:id", authorizeRoles("admin"), async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      "DELETE FROM users WHERE id=$1 RETURNING *",
+      "DELETE FROM users WHERE id=$1 RETURNING id, name, email, role",
       [id]
     );
     if (!result.rows.length)
       return res.status(404).json({ message: "User not found" });
-    res.json({ message: "User deleted successfully" });
+
+    res.json({
+      message: "User deleted successfully",
+      deletedUser: result.rows[0], // 👈 includes deleted user details
+    });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 module.exports = router;
