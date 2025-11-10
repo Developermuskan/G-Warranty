@@ -37,21 +37,6 @@ app.use(
 );
 
 
-//delete later
-app.get('/api/db-check', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT current_database(), current_user;');
-    res.json({
-      connected: true,
-      database: result.rows[0].current_database,
-      user: result.rows[0].current_user,
-      environment: process.env.NODE_ENV || "development",
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ connected: false, error: err.message });
-  }
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
