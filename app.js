@@ -1,42 +1,62 @@
 // app.js
-require('dotenv').config();
 const express = require('express');
+const dotenv = require('dotenv');
 const cors = require('cors');
-
-// ✅ Import DB connection
-const pool = require('./db');
-
-// Import routes
-const userRoutes = require('./routes/userRoutes');
-const authRoutes = require('./routes/authRoutes');
-
-// Import Swagger
 const { swaggerUi, swaggerSpec } = require('./swagger');
+const pool = require('./config/postgresdb'); // DB connection
 
-// ✅ Import JWT verify middleware
-const verifyToken = require('./middleware/authMiddleware');
+// Load environment variables
+dotenv.config();
 
+// Initialize app
 const app = express();
+
+// Middleware
+app.use(cors());
 app.use(express.json());
-app.use(cors()); // Enable CORS for all origins
 
-// ✅ Apply routes
-// Auth routes (login/register) remain PUBLIC (no token needed)
+// ✅ ROUTES
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+
+// Mount routes
 app.use('/api/auth', authRoutes);
-
-// ✅ All other routes PROTECTED with JWT verification
 app.use('/api/users', userRoutes);
 
-// ✅ Swagger UI setup
-app.use(
-  '/api-docs',
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    customCss: '.swagger-ui .topbar { display: none }',
-  })
-);
+// ✅ DB Check Route
+app.get('/api/db-check', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT current_database(), current_user');
+    res.json({
+      connected: true,
+      database: result.rows[0].current_database,
+      user: result.rows[0].current_user,
+      environment: process.env.NODE_ENV || 'development',
+    });
+    client.release();
+  } catch (err) {
+    res.status(500).json({ connected: false, error: err.message });
+  }
+});
+
+// ✅ Swagger Docs Route
+const swaggerOptionsUI = {
+  customCss: `
+    .swagger-ui .topbar { display: none !important; }  /* Hides the header bar */
+    .swagger-ui .info hgroup.main { margin-top: 0 !important; } /* Adjust spacing */
+  `,
+  customSiteTitle: "G-Warranty API Docs",
+};
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, swaggerOptionsUI));
 
 
+// ✅ Default Home Route
+app.get('/', (req, res) => {
+  res.send('🚀 G-Warranty API is running in MVC mode!');
+});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

@@ -6,23 +6,19 @@ const swaggerOptions = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "User Management API",
+      title: "API Documentation",
       version: "1.0.0",
-      description: "A simple CRUD API using Node.js, Express, and PostgreSQL",
+      description:
+        "API documentation for **G-Warranty** — a role-based access and warranty management system built with Node.js, Express, and PostgreSQL.",
+      contact: {
+        name: "G-Warranty Developer Team",
+        email: "support@gwarranty.com",
+      },
     },
     servers: [
-      {
-        url: "http://localhost:3000",
-        description: "Local Server",
-      },
-      {
-        url: "https://facultative-melita-sonorous.ngrok-free.dev",
-        description: "Ngrok Tunnel (Live Server)",
-      },
-      {
-        url: "https://g-warranty.onrender.com",
-        description: "Render Live Server",
-      },
+      { url: "http://localhost:3000", description: "Local Server" },
+      { url: "https://facultative-melita-sonorous.ngrok-free.dev", description: "Ngrok Tunnel (Live Server)" },
+      { url: "https://g-warranty.onrender.com", description: "Render Production Server" },
     ],
     components: {
       securitySchemes: {
@@ -33,14 +29,12 @@ const swaggerOptions = {
         },
       },
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    security: [{ bearerAuth: [] }],
   },
   apis: ["./routes/*.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+// ✅ Export properly
 module.exports = { swaggerUi, swaggerSpec };

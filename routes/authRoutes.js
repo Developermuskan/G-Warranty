@@ -1,17 +1,9 @@
 // routes/authRoutes.js
-const express = require("express");
-const bcrypt = require("bcrypt");
-const pool = require("../db");
+const express = require('express');
 const router = express.Router();
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
-
-const {
-  generateAccessToken,
-  generateRefreshToken,
-} = require("../middleware/tokenService");
-const verifyToken = require("../middleware/authMiddleware");
-const authorizeRoles = require("../middleware/roleMiddleware");
+const verifyToken = require('../middleware/authMiddleware');
+const authorizeRoles = require('../middleware/roleMiddleware');
+const { login, refreshToken } = require('../controllers/authController');
 
 /**
  * @swagger
@@ -114,39 +106,7 @@ router.get("/shopkeeper-zone", verifyToken, authorizeRoles("shopkeeper", "admin"
 // ✅ USER DASHBOARDS — ROLE PROTECTED ROUTES
 
 // 🧠 Login Route
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
-    if (result.rows.length === 0)
-      return res.status(400).json({ message: "Invalid email or password" });
-
-    const user = result.rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid email or password" });
-
-    // include role when generating tokens and sending response
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-
-  res.json({
-    message: "Login successful",
-    accessToken,
-    refreshToken,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role, // 👈 added line
-    },
-  });
-  } catch (err) {
-    console.error("Login error:", err.message);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+router.post("/login", login);
 
 /**
  * @swagger
@@ -184,18 +144,6 @@ router.post("/login", async (req, res) => {
  */
 
 // ♻️ Refresh Token Route
-router.post("/refresh-token", (req, res) => {
-  const { token } = req.body;
-  if (!token)
-    return res.status(401).json({ message: "No refresh token provided" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    const accessToken = generateAccessToken(decoded);
-    res.json({ accessToken });
-  } catch (err) {
-    return res.status(403).json({ message: "Invalid or expired refresh token" });
-  }
-});
+router.post("/refresh-token", refreshToken);
 
 module.exports = router;
