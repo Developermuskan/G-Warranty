@@ -178,6 +178,37 @@ router.get("/:id", authorizeRoles("admin"), getUserById);
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the user to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *             example:
+ *               name: Jane Doe
+ *               email: jane@example.com
+ *               role: user
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
  */
 router.put("/:id", authorizeRoles("admin"), updateUser);
 
