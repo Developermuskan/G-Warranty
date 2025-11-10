@@ -49,10 +49,31 @@ const {
  *                 format: password
  *                 example: mySecret123
  *     responses:
- *       201:
- *         description: User registered successfully
- *       500:
- *         description: Server error
+ *         201:
+ *          description: User registered successfully
+ *          content:
+ *             application/json:
+ *               schema:
+ *                 type: object
+ *                 properties:
+ *                   message:
+ *                     type: string
+ *                     example: User registered successfully
+ *                   user:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: Muskan Verma
+ *                       email:
+ *                         type: string
+ *                         example: muskan@example.com
+ *                       role:
+ *                         type: string
+ *                         example: user
  */
 router.post("/register", registerUser);
 
@@ -88,8 +109,29 @@ router.post("/register", registerUser);
  *     responses:
  *       201:
  *         description: User created successfully
- *       403:
- *         description: Forbidden — Only admin can create
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User created successfully
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 2
+ *                     name:
+ *                       type: string
+ *                       example: Admin User
+ *                     email:
+ *                       type: string
+ *                       example: admin@example.com
+ *                     role:
+ *                       type: string
+ *                       example: admin
  */
 router.post("/admin-create", verifyToken, authorizeRoles("admin"), adminCreateUser);
 
